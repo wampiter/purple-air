@@ -1,22 +1,39 @@
-import os
+import smtplib, ssl
 from datetime import datetime
 from urllib.request import Request, urlopen
 import json
 from enum import Enum
-import boto3
+
+import config
 
 PURPLE_AIR_URL_PREFIX = 'https://www.purpleair.com/json?show='
+smtp_server = "smtp.gmail.com"
+port = 587  # For starttls
 
-SENSOR_ID = os.environ['sensor_id']
-BUCKET_NAME = os.environ['bucket_name']
-FILENAME = os.environ['filename']
-TOPIC_ARN = os.environ['topic_arn']
-MIN_COLOR_NOTIF_THRESHOLD = int(os.environ['min_color_notif_threshold'])
-COUNTER_STRATEGY = os.environ['counter'] # 'a' -> Counter 0, 'b' -> Counter 1, 'both' -> average of both
-CONVERSION_METHOD = os.environ['conversion']
+SENSOR_ID = config.sensor_id
+FILENAME = config.filename
+MIN_COLOR_NOTIF_THRESHOLD = config.min_color_notif_threshold
+COUNTER_STRATEGY = config.counter # 'a' -> Counter 0, 'b' -> Counter 1, 'both' -> average of both
+CONVERSION_METHOD = config.conversion_method
+SENDER_EMAIL = config.sender_email
+TO_EMAILS = config.to_emails
+PASSWORD = config.password
 
-s3 = boto3.client('s3')
-sns = boto3.client('sns')
+context = ssl.create_default_context()
+
+def send_gmail(sender_email, to_emails, password, message):
+	'''log onto server and send message from sender_email to to_emails'''
+	try:
+	    server = smtplib.SMTP(smtp_server,port)
+	    server.starttls(context=context) # Secure the connection
+	    server.login(sender_email, password)
+	    for to_email in to_emails:
+	        server.sendmail(sender_email, to_email, message)
+	except Exception as e:
+	    print('errin yo')
+	    print(e)
+	finally:
+	    server.quit()
 
 class Color(Enum):
     green        = 1
@@ -69,14 +86,14 @@ def pm_2_5_average(data):
         return reading
 
 def get_last_color():
-    response = s3.get_object(Bucket=BUCKET_NAME, Key=FILENAME)
-    color_name = response['Body'].read().decode('utf-8').strip()
+    with open(FILENAME, 'r') as f:
+        color_name = f.read().strip()
     return Color[color_name]
 
 
 def update_color(color):
-    s3.put_object(Bucket=BUCKET_NAME, Key=FILENAME, Body=color.name)
-
+    with open(FILENAME, 'w') as f:
+        f.write(color.name)
 
 def notify_color_change(old_color, new_color):
     if old_color.value < new_color.value:
@@ -86,15 +103,15 @@ def notify_color_change(old_color, new_color):
         print("improved")
         message = "The air has improved from " + old_color.name + " to " + new_color.name
     print("About to send notification of change")
-    sns.publish(TopicArn=TOPIC_ARN,Message=message)
+    send_gmail(SENDER_EMAIL, TO_EMAILS, PASSWORD, message)
 
 
 def should_notify_color_change(old_color, new_color):
     return max(old_color.value, new_color.value) >= MIN_COLOR_NOTIF_THRESHOLD
 
 
-def lambda_handler(event, context):
-    print('Checking on sensor {} at {}...'.format(SENSOR_ID, event['time']))
+def main():
+    print('Checking on sensor {} at {}...'.format(SENSOR_ID, datetime.now()))
     try:
         current_data = get_sensor_data()
         current_pm_2_5 = pm_2_5_average(current_data)
@@ -119,6 +136,9 @@ def lambda_handler(event, context):
         raise
     else:
         print('Check succeeded!')
-        return event['time']
+        return datetime.now()
     finally:
         print('Check complete at {}'.format(str(datetime.now())))
+
+if __name__ == '__main__':
+	main()
