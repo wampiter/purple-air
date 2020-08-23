@@ -3,6 +3,7 @@ from datetime import datetime
 from urllib.request import Request, urlopen
 import json
 from enum import Enum
+import os
 
 import config
 
@@ -11,7 +12,7 @@ smtp_server = "smtp.gmail.com"
 port = 587  # For starttls
 
 SENSOR_ID = config.sensor_id
-FILENAME = config.filename
+FILENAME = os.path.dirname(os.path.abspath(__file__)) + '/' + config.filename
 MIN_COLOR_NOTIF_THRESHOLD = config.min_color_notif_threshold
 COUNTER_STRATEGY = config.counter # 'a' -> Counter 0, 'b' -> Counter 1, 'both' -> average of both
 CONVERSION_METHOD = config.conversion_method
