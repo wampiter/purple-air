@@ -88,10 +88,13 @@ def pm_2_5_average(data):
         return reading
 
 def get_last_color():
-    with open(FILENAME, 'r') as f:
-        color_name = f.read().strip()
+    try:
+        with open(FILENAME, 'r') as f:
+            color_name = f.read().strip()
+    except FileNotFoundError:
+        print('No previous color. Pretending it was green.')
+        color_name = 'green'
     return Color[color_name]
-
 
 def update_color(color):
     with open(FILENAME, 'w') as f:

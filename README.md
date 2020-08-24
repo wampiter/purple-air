@@ -13,12 +13,9 @@ You can find PurpleAir's API documentation [here](https://docs.google.com/docume
 * `to_emails`
 * `password`
 
-2. Create an initial `air_color.txt` file. Contents can just be `green`. TO DO: have code handle this automatically.
-
-3. run code as cron job:
+2. run code as cron job:
 * open your cron table: `crontab -e`
 * make a row that runs this every e.g. 10 minutes: `*/10 * * * * python3 /path/to/purple-air/purple_air.py`
 
 TO DO:
-* create initial `air_color.txt` (as mentioned above)
-* add hysteresis (e.g. don't e-mail me unless change persists for 2 checks, don't e-mail me if already e-mailed me in the last few checks.)
+* add hysteresis (e.g. don't e-mail me unless change persists for 2 checks, and/or don't e-mail me if already e-mailed me in the last few checks.)
