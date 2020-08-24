@@ -14,6 +14,7 @@ port = 587  # For starttls
 SENSOR_ID = config.sensor_id
 FILENAME = os.path.dirname(os.path.abspath(__file__)) + '/' + config.filename
 MIN_COLOR_NOTIF_THRESHOLD = config.min_color_notif_threshold
+MAX_COLOR_NOTIF_THRESHOLD = config.max_color_notif_threshold
 COUNTER_STRATEGY = config.counter # 'a' -> Counter 0, 'b' -> Counter 1, 'both' -> average of both
 CONVERSION_METHOD = config.conversion_method
 SENDER_EMAIL = config.sender_email
@@ -108,8 +109,15 @@ def notify_color_change(old_color, new_color):
 
 
 def should_notify_color_change(old_color, new_color):
-    return max(old_color.value, new_color.value) >= MIN_COLOR_NOTIF_THRESHOLD
-
+    if MIN_COLOR_NOTIF_THRESHOLD is not None:
+        big_enough = max(old_color.value, new_color.value) >= MIN_COLOR_NOTIF_THRESHOLD
+    else:
+        big_enough = True
+    if MAX_COLOR_NOTIF_THRESHOLD is not None:
+        small_enough = min(old_color.value, new_color.value) <= MAX_COLOR_NOTIF_THRESHOLD
+    else:
+        small_enough = True
+    return (big_enough and small_enough)
 
 def main():
     print('Checking on sensor {} at {}...'.format(SENSOR_ID, datetime.now()))
@@ -129,7 +137,7 @@ def main():
                 print("sending color change notification")
                 notify_color_change(last_color, new_color)
             else:
-                print("change below notification threshold")
+                print("change outside notification thresholds")
         else:
             print("no change in color (still " + new_color.name + ")")
     except:
